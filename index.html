@@ -103,6 +103,25 @@
     font-size: 15px;
     pointer-events: none;
     text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    z-index: 6;
+  }
+
+  .laser-line {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    top: 50%;
+    height: 2px;
+    background: #666;
+    box-shadow: 0 0 6px 1px rgba(0,0,0,0.3);
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 6;
+    transition: background 0.1s, box-shadow 0.1s;
+  }
+  .laser-line.live {
+    background: #ff1a1a;
+    box-shadow: 0 0 10px 3px rgba(255,26,26,0.9), 0 0 20px 6px rgba(255,26,26,0.4);
   }
 
   .status-row {
@@ -191,7 +210,8 @@
 
 <div class="card-light">
   <div id="reader"></div>
-  <div class="idle-overlay" id="idleOverlay">🔒 กดปุ่มด้านล่างค้างไว้เพื่อสแกน</div>
+  <div class="laser-line" id="laserLine"></div>
+  <div class="idle-overlay" id="idleOverlay">🔒 กดปุ่มด้านล่างค้างไว้ แล้วให้เส้นแดงพาดผ่านบาร์โค้ด</div>
   <div class="status-row">
     <div class="dot" id="statusDot"></div>
     <span id="status">กำลังเปิดกล้อง...</span>
@@ -263,7 +283,7 @@ async function sendToPC(code) {
 }
 
 const html5QrCode = new Html5Qrcode("reader");
-const qrConfig = { fps: 12, qrbox: { width: 250, height: 150 } };
+const qrConfig = { fps: 12, qrbox: { width: 270, height: 50 } };
 
 let lastCode = '';
 let scannedThisPress = false; // สแกนไปแล้วในการกดครั้งนี้หรือยัง
@@ -300,6 +320,7 @@ function startScanning() {
   scannedThisPress = false;
   try { html5QrCode.resume(); } catch (e) {}
   document.getElementById('reader').classList.add('active');
+  document.getElementById('laserLine').classList.add('live');
   document.getElementById('idleOverlay').classList.add('hidden');
   document.getElementById('statusDot').classList.add('live');
   document.getElementById('status').innerText = 'กำลังสแกน...';
@@ -311,6 +332,7 @@ function stopScanning() {
   scanningEnabled = false;
   try { html5QrCode.pause(true); } catch (e) {}
   document.getElementById('reader').classList.remove('active');
+  document.getElementById('laserLine').classList.remove('live');
   document.getElementById('idleOverlay').classList.remove('hidden');
   document.getElementById('statusDot').classList.remove('live');
   document.getElementById('status').innerText = 'พร้อมใช้งาน — กดปุ่มด้านล่างค้างไว้';
