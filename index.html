@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <title>ปืนยิงบาร์โค้ด</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -15,12 +15,11 @@
   :root {
     --yellow: #FFC400;
     --dark: #1c1c1e;
-    --dark2: #26262a;
     --green: #34c759;
     --red: #ff4d4f;
     --radius: 22px;
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     background: var(--yellow);
@@ -28,6 +27,7 @@
     padding: 16px;
     padding-bottom: 40px;
     min-height: 100vh;
+    overscroll-behavior: none;
   }
   h1 {
     color: #1c1c1e;
@@ -50,6 +50,7 @@
     padding: 14px;
     margin-bottom: 16px;
     box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    position: relative;
   }
 
   .config-label {
@@ -61,15 +62,8 @@
     align-items: center;
     gap: 6px;
   }
-  .config-sub {
-    color: #999;
-    font-size: 13px;
-    margin-bottom: 12px;
-  }
-  .config-row {
-    display: flex;
-    gap: 8px;
-  }
+  .config-sub { color: #999; font-size: 13px; margin-bottom: 12px; }
+  .config-row { display: flex; gap: 8px; }
   input {
     flex: 1;
     padding: 13px 14px;
@@ -78,6 +72,8 @@
     background: #0f0f10;
     color: #eee;
     font-size: 14px;
+    -webkit-user-select: text;
+    user-select: text;
   }
   input::placeholder { color: #666; }
   button {
@@ -87,17 +83,26 @@
     font-size: 15px;
     cursor: pointer;
   }
-  .btn-yellow {
-    background: var(--yellow);
-    color: #1c1c1e;
-    padding: 13px 20px;
-    white-space: nowrap;
-  }
+  .btn-yellow { background: var(--yellow); color: #1c1c1e; padding: 13px 20px; white-space: nowrap; }
 
   #reader {
     width: 100%;
     border-radius: 16px;
     overflow: hidden;
+    filter: brightness(0.55);
+    transition: filter 0.15s;
+  }
+  #reader.active { filter: brightness(1); }
+
+  .idle-overlay {
+    position: absolute;
+    top: 14px; left: 14px; right: 14px;
+    text-align: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 15px;
+    pointer-events: none;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
   }
 
   .status-row {
@@ -110,26 +115,20 @@
     color: #555;
     font-weight: 600;
   }
-  .dot {
-    width: 9px; height: 9px; border-radius: 50%;
-    background: #ccc;
-  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #ccc; }
   .dot.ok { background: var(--green); }
+  .dot.live { background: var(--red); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
   .result-card {
     background: var(--dark);
     border-radius: var(--radius);
-    padding: 22px;
+    padding: 18px 22px;
     text-align: center;
+    margin-bottom: 16px;
   }
   .result-label { color: #999; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
-  .result-code {
-    color: var(--green);
-    font-size: 26px;
-    font-weight: 800;
-    word-break: break-all;
-    min-height: 34px;
-  }
+  .result-code { color: var(--green); font-size: 24px; font-weight: 800; word-break: break-all; min-height: 30px; }
   .result-count {
     margin-top: 10px;
     display: inline-block;
@@ -141,19 +140,35 @@
     font-weight: 700;
   }
 
+  #trigger {
+    width: 100%;
+    padding: 22px;
+    border-radius: 26px;
+    background: var(--dark);
+    color: var(--yellow);
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    box-shadow: 0 8px 0 #000, 0 10px 18px rgba(0,0,0,0.25);
+    transform: translateY(0);
+    transition: transform 0.08s, box-shadow 0.08s, background 0.08s;
+  }
+  #trigger.pressed {
+    background: var(--green);
+    color: #06210f;
+    transform: translateY(6px);
+    box-shadow: 0 2px 0 #000, 0 4px 10px rgba(0,0,0,0.25);
+  }
+
   #gear {
     position: fixed;
-    top: 14px;
-    right: 16px;
+    top: 14px; right: 16px;
     font-size: 20px;
     background: #1c1c1e;
     color: var(--yellow);
-    width: 40px;
-    height: 40px;
+    width: 40px; height: 40px;
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     z-index: 10;
   }
   .hidden { display: none !important; }
@@ -176,6 +191,7 @@
 
 <div class="card-light">
   <div id="reader"></div>
+  <div class="idle-overlay" id="idleOverlay">🔒 กดปุ่มด้านล่างค้างไว้เพื่อสแกน</div>
   <div class="status-row">
     <div class="dot" id="statusDot"></div>
     <span id="status">กำลังเปิดกล้อง...</span>
@@ -188,10 +204,13 @@
   <div class="result-count" id="count">ยังไม่มีการสแกน</div>
 </div>
 
+<button id="trigger">👉 กดค้างเพื่อสแกน</button>
+
 <script>
 let dbUrl = localStorage.getItem('dbUrl') || '';
 document.getElementById('dbUrl').value = dbUrl;
 let sentCount = 0;
+let scanningEnabled = false; // จะเป็น true ตอนกดปุ่มค้างเท่านั้น
 
 if (dbUrl) {
   document.getElementById('config').classList.add('hidden');
@@ -206,8 +225,7 @@ function showConfig() {
 function saveConfig() {
   dbUrl = document.getElementById('dbUrl').value.trim().replace(/\/$/, '');
   localStorage.setItem('dbUrl', dbUrl);
-  document.getElementById('status').innerText = 'บันทึกแล้ว พร้อมสแกน';
-  document.getElementById('statusDot').classList.add('ok');
+  document.getElementById('status').innerText = 'บันทึกแล้ว';
   document.getElementById('config').classList.add('hidden');
   document.getElementById('gear').classList.remove('hidden');
 }
@@ -239,41 +257,73 @@ async function sendToPC(code) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     sentCount++;
     document.getElementById('count').innerText = 'ส่งไปแล้ว ' + sentCount + ' ครั้ง';
-    document.getElementById('status').innerText = 'ส่งสำเร็จ';
-    document.getElementById('statusDot').classList.add('ok');
   } catch (e) {
     document.getElementById('status').innerText = 'ส่งไม่สำเร็จ: ' + e.message;
-    document.getElementById('statusDot').classList.remove('ok');
   }
 }
 
 const html5QrCode = new Html5Qrcode("reader");
-const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+const qrConfig = { fps: 12, qrbox: { width: 250, height: 150 } };
 
 let lastCode = '';
-let lastTime = 0;
+let scannedThisPress = false; // สแกนไปแล้วในการกดครั้งนี้หรือยัง
 
 function onScanSuccess(decodedText) {
-  const now = Date.now();
-  if (decodedText === lastCode && now - lastTime < 1500) return;
+  if (!scanningEnabled) return;
+  if (scannedThisPress) return; // กดค้างอยู่แต่สแกนไปแล้ว 1 ชิ้น ไม่รับซ้ำจนกว่าจะปล่อยแล้วกดใหม่
+  scannedThisPress = true;
   lastCode = decodedText;
-  lastTime = now;
   document.getElementById('last').innerText = decodedText;
   sendToPC(decodedText);
   beep();
-  if (navigator.vibrate) navigator.vibrate(100);
+  if (navigator.vibrate) navigator.vibrate(80);
 }
+
+let cameraReady = false;
 
 html5QrCode.start(
   { facingMode: "environment" },
-  config,
+  qrConfig,
   onScanSuccess
 ).then(() => {
-  document.getElementById('status').innerText = 'พร้อมสแกน';
+  cameraReady = true;
+  html5QrCode.pause(true); // เริ่มต้นแบบหยุดไว้ก่อน รอกดปุ่ม
+  document.getElementById('status').innerText = 'พร้อมใช้งาน — กดปุ่มด้านล่างค้างไว้';
   document.getElementById('statusDot').classList.add('ok');
 }).catch(err => {
   document.getElementById('status').innerText = 'เปิดกล้องไม่ได้: ' + err;
 });
+
+function startScanning() {
+  if (!cameraReady) return;
+  scanningEnabled = true;
+  scannedThisPress = false;
+  try { html5QrCode.resume(); } catch (e) {}
+  document.getElementById('reader').classList.add('active');
+  document.getElementById('idleOverlay').classList.add('hidden');
+  document.getElementById('statusDot').classList.add('live');
+  document.getElementById('status').innerText = 'กำลังสแกน...';
+  document.getElementById('trigger').classList.add('pressed');
+}
+
+function stopScanning() {
+  if (!cameraReady) return;
+  scanningEnabled = false;
+  try { html5QrCode.pause(true); } catch (e) {}
+  document.getElementById('reader').classList.remove('active');
+  document.getElementById('idleOverlay').classList.remove('hidden');
+  document.getElementById('statusDot').classList.remove('live');
+  document.getElementById('status').innerText = 'พร้อมใช้งาน — กดปุ่มด้านล่างค้างไว้';
+  document.getElementById('trigger').classList.remove('pressed');
+}
+
+const trigger = document.getElementById('trigger');
+trigger.addEventListener('touchstart', e => { e.preventDefault(); startScanning(); }, { passive: false });
+trigger.addEventListener('touchend', e => { e.preventDefault(); stopScanning(); }, { passive: false });
+trigger.addEventListener('touchcancel', e => { e.preventDefault(); stopScanning(); }, { passive: false });
+trigger.addEventListener('mousedown', startScanning);
+trigger.addEventListener('mouseup', stopScanning);
+trigger.addEventListener('mouseleave', stopScanning);
 </script>
 </body>
 </html>
