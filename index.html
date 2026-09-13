@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ปืนยิงบาร์โค้ด</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#FFC400">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root {
+    --yellow: #FFC400;
+    --dark: #1c1c1e;
+    --dark2: #26262a;
+    --green: #34c759;
+    --red: #ff4d4f;
+    --radius: 22px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--yellow);
+    margin: 0;
+    padding: 16px;
+    padding-bottom: 40px;
+    min-height: 100vh;
+  }
+  h1 {
+    color: #1c1c1e;
+    font-size: 22px;
+    font-weight: 800;
+    text-align: center;
+    margin: 6px 0 16px;
+  }
+
+  .card {
+    background: var(--dark);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+  }
+  .card-light {
+    background: #fff;
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 16px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  }
+
+  .config-label {
+    color: var(--yellow);
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .config-sub {
+    color: #999;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .config-row {
+    display: flex;
+    gap: 8px;
+  }
+  input {
+    flex: 1;
+    padding: 13px 14px;
+    border-radius: 14px;
+    border: none;
+    background: #0f0f10;
+    color: #eee;
+    font-size: 14px;
+  }
+  input::placeholder { color: #666; }
+  button {
+    border: none;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .btn-yellow {
+    background: var(--yellow);
+    color: #1c1c1e;
+    padding: 13px 20px;
+    white-space: nowrap;
+  }
+
+  #reader {
+    width: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+    font-size: 14px;
+    color: #555;
+    font-weight: 600;
+  }
+  .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: #ccc;
+  }
+  .dot.ok { background: var(--green); }
+
+  .result-card {
+    background: var(--dark);
+    border-radius: var(--radius);
+    padding: 22px;
+    text-align: center;
+  }
+  .result-label { color: #999; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .result-code {
+    color: var(--green);
+    font-size: 26px;
+    font-weight: 800;
+    word-break: break-all;
+    min-height: 34px;
+  }
+  .result-count {
+    margin-top: 10px;
+    display: inline-block;
+    background: #0f0f10;
+    color: var(--yellow);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  #gear {
+    position: fixed;
+    top: 14px;
+    right: 16px;
+    font-size: 20px;
+    background: #1c1c1e;
+    color: var(--yellow);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<button id="gear" onclick="showConfig()">⚙️</button>
+
+<h1>🔫 ปืนยิงบาร์โค้ด</h1>
+
+<div class="card" id="config">
+  <div class="config-label">⚙️ ตั้งค่าลิงก์หลังบ้าน</div>
+  <div class="config-sub">วาง Firebase Database URL ของคุณ:</div>
+  <div class="config-row">
+    <input type="text" id="dbUrl" placeholder="https://xxxx-default-rtdb...">
+    <button class="btn-yellow" onclick="saveConfig()">บันทึก</button>
+  </div>
+</div>
+
+<div class="card-light">
+  <div id="reader"></div>
+  <div class="status-row">
+    <div class="dot" id="statusDot"></div>
+    <span id="status">กำลังเปิดกล้อง...</span>
+  </div>
+</div>
+
+<div class="result-card">
+  <div class="result-label">รหัสล่าสุดที่สแกนได้</div>
+  <div class="result-code" id="last">—</div>
+  <div class="result-count" id="count">ยังไม่มีการสแกน</div>
+</div>
+
+<script>
+let dbUrl = localStorage.getItem('dbUrl') || '';
+document.getElementById('dbUrl').value = dbUrl;
+let sentCount = 0;
+
+if (dbUrl) {
+  document.getElementById('config').classList.add('hidden');
+} else {
+  document.getElementById('gear').classList.add('hidden');
+}
+
+function showConfig() {
+  document.getElementById('config').classList.remove('hidden');
+}
+
+function saveConfig() {
+  dbUrl = document.getElementById('dbUrl').value.trim().replace(/\/$/, '');
+  localStorage.setItem('dbUrl', dbUrl);
+  document.getElementById('status').innerText = 'บันทึกแล้ว พร้อมสแกน';
+  document.getElementById('statusDot').classList.add('ok');
+  document.getElementById('config').classList.add('hidden');
+  document.getElementById('gear').classList.remove('hidden');
+}
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function beep() {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.frequency.value = 1200;
+  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.1);
+}
+
+async function sendToPC(code) {
+  if (!dbUrl) {
+    document.getElementById('status').innerText = 'ยังไม่ได้ใส่ Database URL';
+    return;
+  }
+  const payload = { code: code, ts: Date.now() };
+  try {
+    const res = await fetch(dbUrl + '/scans.json', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    sentCount++;
+    document.getElementById('count').innerText = 'ส่งไปแล้ว ' + sentCount + ' ครั้ง';
+    document.getElementById('status').innerText = 'ส่งสำเร็จ';
+    document.getElementById('statusDot').classList.add('ok');
+  } catch (e) {
+    document.getElementById('status').innerText = 'ส่งไม่สำเร็จ: ' + e.message;
+    document.getElementById('statusDot').classList.remove('ok');
+  }
+}
+
+const html5QrCode = new Html5Qrcode("reader");
+const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+
+let lastCode = '';
+let lastTime = 0;
+
+function onScanSuccess(decodedText) {
+  const now = Date.now();
+  if (decodedText === lastCode && now - lastTime < 1500) return;
+  lastCode = decodedText;
+  lastTime = now;
+  document.getElementById('last').innerText = decodedText;
+  sendToPC(decodedText);
+  beep();
+  if (navigator.vibrate) navigator.vibrate(100);
+}
+
+html5QrCode.start(
+  { facingMode: "environment" },
+  config,
+  onScanSuccess
+).then(() => {
+  document.getElementById('status').innerText = 'พร้อมสแกน';
+  document.getElementById('statusDot').classList.add('ok');
+}).catch(err => {
+  document.getElementById('status').innerText = 'เปิดกล้องไม่ได้: ' + err;
+});
+</script>
+</body>
+</html>
